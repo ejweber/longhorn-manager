@@ -1103,6 +1103,16 @@ var (
 		ReadOnly:    true,
 		Default:     "1024",
 	}
+
+	SettingDefinitionReplicaDiskSoftAntiAffinity = SettingDefinition{
+		DisplayName: "Replica Disk Level Soft Anti-Affinity",
+		Description: "Allow scheduling on disks with existing healthy replicas of the same volume",
+		Category:    SettingCategoryScheduling,
+		Type:        SettingTypeBool,
+		Required:    true,
+		ReadOnly:    false,
+		Default:     "true",
+	}
 )
 
 type NodeDownPodDeletionPolicy string
