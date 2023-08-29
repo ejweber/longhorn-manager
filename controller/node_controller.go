@@ -492,6 +492,10 @@ func (nc *NodeController) syncNode(key string) (err error) {
 		node.Status.Region, node.Status.Zone = types.GetRegionAndZone(kubeNode.Labels)
 	}
 
+	if err = nc.syncEvictingCondition(node, kubeNode); err != nil {
+		return err
+	}
+
 	if nc.controllerID != node.Name {
 		return nil
 	}
@@ -1436,4 +1440,26 @@ func (nc *NodeController) createSnapshotMonitor() (mon monitor.Monitor, err erro
 	nc.snapshotMonitor = mon
 
 	return mon, nil
+}
+
+func (nc *NodeController) syncEvictingCondition(node *longhorn.Node, kubeNode *corev1.Node) error {
+	nodeDrainPolicy, err := nc.ds.GetSettingValueExisted(types.SettingNameNodeDrainPolicy)
+	if err != nil {
+		return err
+	}
+
+	if nodeDrainPolicy != string(types.NodeDrainPolicyBlockForEviction) {
+		return nil
+	}
+
+	logrus.Infof("HERE with %t", kubeNode.Spec.Unschedulable)
+
+	// TODO: What about the "normal" reason eviction is requested?
+	if kubeNode.Spec.Unschedulable {
+		node.Status.Conditions = types.SetConditionAndRecord(node.Status.Conditions, longhorn.NodeConditionTypeEvicting, longhorn.ConditionStatusTrue, "", fmt.Sprintf("Node %v is cordoned and %s is %s", node.Name, types.SettingNameNodeDrainPolicy, types.NodeDrainPolicyBlockForEviction), nc.eventRecorder, node, corev1.EventTypeNormal)
+	} else {
+		node.Status.Conditions = types.SetConditionAndRecord(node.Status.Conditions, longhorn.NodeConditionTypeEvicting, longhorn.ConditionStatusFalse, "", fmt.Sprintf("Node %v is not cordoned and %s is %s", node.Name, types.SettingNameNodeDrainPolicy, types.NodeDrainPolicyBlockForEviction), nc.eventRecorder, node, corev1.EventTypeNormal)
+	}
+
+	return nil
 }

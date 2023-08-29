@@ -732,6 +732,11 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 		return false, err
 	}
 
+	if nodeDrainingPolicy == string(types.NodeDrainPolicyBlockForEviction) && len(replicasOnCurrentNode) > 0 {
+		// We must wait for ALL replicas to be evicted before removing the PDB.
+		return false, nil
+	}
+
 	targetReplicas := []*longhorn.Replica{}
 	if nodeDrainingPolicy == string(types.NodeDrainPolicyAllowIfReplicaIsStopped) {
 		for _, replica := range replicasOnCurrentNode {

@@ -703,6 +703,7 @@ var (
 		ReadOnly: false,
 		Default:  string(NodeDrainPolicyBlockIfContainsLastReplica),
 		Choices: []string{
+			string(NodeDrainPolicyBlockForEviction),
 			string(NodeDrainPolicyBlockIfContainsLastReplica),
 			string(NodeDrainPolicyAllowIfReplicaIsStopped),
 			string(NodeDrainPolicyAlwaysAllow),
@@ -1155,12 +1156,13 @@ const (
 	NodeDownPodDeletionPolicyDeleteBothStatefulsetAndDeploymentPod = NodeDownPodDeletionPolicy("delete-both-statefulset-and-deployment-pod")
 )
 
-type NodeWithLastHealthyReplicaDrainPolicy string
+type NodeDrainPolicy string
 
 const (
-	NodeDrainPolicyBlockIfContainsLastReplica = NodeWithLastHealthyReplicaDrainPolicy("block-if-contains-last-replica")
-	NodeDrainPolicyAllowIfReplicaIsStopped    = NodeWithLastHealthyReplicaDrainPolicy("allow-if-replica-is-stopped")
-	NodeDrainPolicyAlwaysAllow                = NodeWithLastHealthyReplicaDrainPolicy("always-allow")
+	NodeDrainPolicyBlockForEviction           = NodeDrainPolicy("block-for-eviction")
+	NodeDrainPolicyBlockIfContainsLastReplica = NodeDrainPolicy("block-if-contains-last-replica")
+	NodeDrainPolicyAllowIfReplicaIsStopped    = NodeDrainPolicy("allow-if-replica-is-stopped")
+	NodeDrainPolicyAlwaysAllow                = NodeDrainPolicy("always-allow")
 )
 
 type SystemManagedPodsImagePullPolicy string

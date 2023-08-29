@@ -6,6 +6,7 @@ const (
 	NodeConditionTypeReady            = "Ready"
 	NodeConditionTypeMountPropagation = "MountPropagation"
 	NodeConditionTypeSchedulable      = "Schedulable"
+	NodeConditionTypeEvicting         = "Evicting"
 )
 
 const (
