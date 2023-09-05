@@ -218,8 +218,8 @@ func (rc *ReplicaController) isEvictionRequested(replica *longhorn.Replica) bool
 		return false
 	}
 
-	// Check if node has been request eviction.
-	if types.GetCondition(node.Status.Conditions, longhorn.NodeConditionTypeEvicting).Status == longhorn.ConditionStatusTrue {
+	// Check if node has requested eviction or is attempting to auto-evict replicas.
+	if node.Spec.EvictionRequested || node.Status.AutoEvicting {
 		return true
 	}
 

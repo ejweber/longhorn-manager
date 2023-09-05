@@ -123,6 +123,8 @@ type NodeStatus struct {
 	Zone string `json:"zone"`
 	// +optional
 	SnapshotCheckStatus SnapshotCheckStatus `json:"snapshotCheckStatus"`
+	// +optional
+	AutoEvicting bool `json:"autoEvicting"`
 }
 
 // +genclient

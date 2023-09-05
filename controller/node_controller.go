@@ -492,7 +492,7 @@ func (nc *NodeController) syncNode(key string) (err error) {
 		node.Status.Region, node.Status.Zone = types.GetRegionAndZone(kubeNode.Labels)
 	}
 
-	if err = nc.syncEvictingCondition(node, kubeNode); err != nil {
+	if err = nc.syncAutoEvictingStatus(node, kubeNode); err != nil {
 		return err
 	}
 
@@ -1442,24 +1442,24 @@ func (nc *NodeController) createSnapshotMonitor() (mon monitor.Monitor, err erro
 	return mon, nil
 }
 
-func (nc *NodeController) syncEvictingCondition(node *longhorn.Node, kubeNode *corev1.Node) error {
+func (nc *NodeController) syncAutoEvictingStatus(node *longhorn.Node, kubeNode *corev1.Node) error {
+	oldAutoEvicting := node.Status.AutoEvicting
+
 	nodeDrainPolicy, err := nc.ds.GetSettingValueExisted(types.SettingNameNodeDrainPolicy)
 	if err != nil {
 		return err
 	}
-
 	if nodeDrainPolicy != string(types.NodeDrainPolicyBlockForEviction) {
-		return nil
-	}
-
-	logrus.Infof("HERE with %t", kubeNode.Spec.Unschedulable)
-
-	// TODO: What about the "normal" reason eviction is requested?
-	if kubeNode.Spec.Unschedulable {
-		node.Status.Conditions = types.SetConditionAndRecord(node.Status.Conditions, longhorn.NodeConditionTypeEvicting, longhorn.ConditionStatusTrue, "", fmt.Sprintf("Node %v is cordoned and %s is %s", node.Name, types.SettingNameNodeDrainPolicy, types.NodeDrainPolicyBlockForEviction), nc.eventRecorder, node, corev1.EventTypeNormal)
+		node.Status.AutoEvicting = false // We only auto evict in response to the associated policy.
+	} else if kubeNode.Spec.Unschedulable {
+		node.Status.AutoEvicting = true
 	} else {
-		node.Status.Conditions = types.SetConditionAndRecord(node.Status.Conditions, longhorn.NodeConditionTypeEvicting, longhorn.ConditionStatusFalse, "", fmt.Sprintf("Node %v is not cordoned and %s is %s", node.Name, types.SettingNameNodeDrainPolicy, types.NodeDrainPolicyBlockForEviction), nc.eventRecorder, node, corev1.EventTypeNormal)
+		node.Status.AutoEvicting = false
 	}
 
+	if oldAutoEvicting != node.Status.AutoEvicting {
+		nc.logger.Infof("Changed auto eviction status to %t", node.Status.AutoEvicting, "nodeDrainPolicy",
+			nodeDrainPolicy, "kubernetesNodeUnschedulable", kubeNode.Spec.Unschedulable)
+	}
 	return nil
 }
