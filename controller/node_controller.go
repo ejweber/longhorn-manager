@@ -181,7 +181,8 @@ func (nc *NodeController) isResponsibleForSetting(obj interface{}) bool {
 
 	return types.SettingName(setting.Name) == types.SettingNameStorageMinimalAvailablePercentage ||
 		types.SettingName(setting.Name) == types.SettingNameBackingImageCleanupWaitInterval ||
-		types.SettingName(setting.Name) == types.SettingNameOrphanAutoDeletion
+		types.SettingName(setting.Name) == types.SettingNameOrphanAutoDeletion ||
+		types.SettingName(setting.Name) == types.SettingNameNodeDrainPolicy
 }
 
 func (nc *NodeController) isResponsibleForReplica(obj interface{}) bool {
@@ -1458,8 +1459,9 @@ func (nc *NodeController) syncAutoEvictingStatus(node *longhorn.Node, kubeNode *
 	}
 
 	if oldAutoEvicting != node.Status.AutoEvicting {
-		nc.logger.Infof("Changed auto eviction status to %t", node.Status.AutoEvicting, "nodeDrainPolicy",
-			nodeDrainPolicy, "kubernetesNodeUnschedulable", kubeNode.Spec.Unschedulable)
+		log := getLoggerForNode(nc.logger, node).WithFields(logrus.Fields{"nodeDrainPolicy": nodeDrainPolicy,
+			"kubernetesNodeUnschedulable": kubeNode.Spec.Unschedulable})
+		log.Infof("Changed auto eviction status to %t", node.Status.AutoEvicting)
 	}
 	return nil
 }
