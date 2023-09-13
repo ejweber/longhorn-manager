@@ -3640,6 +3640,8 @@ func (s *DataStore) UpdateSnapshotStatus(snap *longhorn.Snapshot) (*longhorn.Sna
 
 // RemoveFinalizerForSnapshot will result in deletion if DeletionTimestamp was set
 func (s *DataStore) RemoveFinalizerForSnapshot(snapshot *longhorn.Snapshot) error {
+	logrus.Infof("RemoveFinalizerForSnapshot called for snapshot: %s", snapshot.Name)
+
 	if !util.FinalizerExists(longhornFinalizerKey, snapshot) {
 		// finalizer already removed
 		return nil
@@ -3651,10 +3653,15 @@ func (s *DataStore) RemoveFinalizerForSnapshot(snapshot *longhorn.Snapshot) erro
 	if err != nil {
 		// workaround `StorageError: invalid object, Code: 4` due to empty object
 		if snapshot.DeletionTimestamp != nil {
+
+			logrus.Errorf("An error occured while deleting the finalizer for snapshot: %s, but we ignored it: %v", snapshot.Name, err)
+
 			return nil
 		}
 		return errors.Wrapf(err, "unable to remove finalizer for snapshot %s", snapshot.Name)
 	}
+
+	logrus.Infof("Actually succeeded in removing finalizer for snapshot: %s", snapshot.Name)
 	return nil
 }
 

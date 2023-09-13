@@ -276,23 +276,33 @@ func (sc *SnapshotController) syncHandler(key string) (err error) {
 }
 
 func (sc *SnapshotController) reconcile(snapshotName string) (err error) {
+	sc.logger.Infof("Reconciling snapshotName: %s", snapshotName)
+
 	snapshot, err := sc.ds.GetSnapshot(snapshotName)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
+
+		sc.logger.Infof("Did not find snapshot: %s", snapshotName)
+
 		return nil
 	}
+
+	finalizerExists := util.FinalizerExists(longhornFinalizerKey, snapshot)
+	sc.logger.Infof("Reconciling snapshot: %s while finalizer exists: %t", snapshotName, finalizerExists)
 
 	isResponsible, err := sc.isResponsibleFor(snapshot)
 	if err != nil {
 		return err
 	}
 	if !isResponsible {
+		sc.logger.Infof("Am not responsible for snapshot: %s", snapshotName)
 		return nil
 	}
 
 	existingSnapshot := snapshot.DeepCopy()
+	sc.logger.Infof("Am reconciling on: %+v", snapshot)
 	defer func() {
 		if err != nil && !shouldUpdateObject(err) {
 			return
@@ -363,6 +373,7 @@ func (sc *SnapshotController) reconcile(snapshotName string) (err error) {
 			if err = sc.handleAttachmentTicketDeletion(snapshot); err != nil {
 				return err
 			}
+			sc.logger.Infof("Decided to remove finalizer for snapshot: %s since attachmentTicket is deleted", snapshotName)
 			return sc.ds.RemoveFinalizerForSnapshot(snapshot)
 		}
 
@@ -428,6 +439,8 @@ func (sc *SnapshotController) handleAttachmentTicketDeletion(snap *longhorn.Snap
 		err = errors.Wrap(err, "handleAttachmentTicketDeletion: failed to clean up attachment")
 	}()
 
+	sc.logger.Infof("Decided to delete attachmentTicket for snapshot: %s", snap.Name)
+
 	va, err := sc.ds.GetLHVolumeAttachmentByVolumeName(snap.Spec.Volume)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -439,7 +452,12 @@ func (sc *SnapshotController) handleAttachmentTicketDeletion(snap *longhorn.Snap
 	attachmentTicketID := longhorn.GetAttachmentTicketID(longhorn.AttacherTypeSnapshotController, snap.Name)
 
 	if _, ok := va.Spec.AttachmentTickets[attachmentTicketID]; ok {
+		existingVA := va.DeepCopy()
+
 		delete(va.Spec.AttachmentTickets, attachmentTicketID)
+
+		sc.logger.Infof("Deleting attachmentTicket because old: %+v new: %+v", existingVA.Spec, va.Spec)
+
 		if _, err = sc.ds.UpdateLHVolumeAttachment(va); err != nil {
 			return err
 		}
@@ -472,6 +490,8 @@ func (sc *SnapshotController) handleAttachmentTicketCreation(snap *longhorn.Snap
 		if reflect.DeepEqual(existingVA.Spec, va.Spec) {
 			return
 		}
+
+		sc.logger.Infof("Updating attachmentTicket because old: %+v new: %+v", existingVA.Spec, va.Spec)
 
 		if _, err = sc.ds.UpdateLHVolumeAttachment(va); err != nil {
 			return
