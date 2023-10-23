@@ -943,7 +943,7 @@ func (s *TestSuite) TestReplicaScheduler(c *C) {
 	}
 	alreadyScheduledReplica := newReplicaForVolume(tc.volume)
 	alreadyScheduledReplica.Spec.NodeID = TestNode1
-	alreadyScheduledReplica.Spec.EvictionRequested = true
+	alreadyScheduledReplica.Spec.EvictionRequestedManual = true
 	tc.allReplicas[alreadyScheduledReplica.Name] = alreadyScheduledReplica
 	node1.Status.DiskStatus = map[string]*longhorn.DiskStatus{
 		getDiskID(TestNode1, "1"): {
@@ -1025,7 +1025,7 @@ func (s *TestSuite) TestReplicaScheduler(c *C) {
 	}
 	alreadyScheduledReplica = newReplicaForVolume(tc.volume)
 	alreadyScheduledReplica.Spec.NodeID = TestNode1
-	alreadyScheduledReplica.Spec.EvictionRequested = true
+	alreadyScheduledReplica.Spec.EvictionRequestedManual = true
 	tc.allReplicas[alreadyScheduledReplica.Name] = alreadyScheduledReplica
 	node1.Status.DiskStatus = map[string]*longhorn.DiskStatus{
 		getDiskID(TestNode1, "1"): {
@@ -1048,7 +1048,7 @@ func (s *TestSuite) TestReplicaScheduler(c *C) {
 	}
 	alreadyScheduledReplica = newReplicaForVolume(tc.volume)
 	alreadyScheduledReplica.Spec.NodeID = TestNode2
-	alreadyScheduledReplica.Spec.EvictionRequested = false
+	alreadyScheduledReplica.Spec.EvictionRequestedManual = false
 	tc.allReplicas[alreadyScheduledReplica.Name] = alreadyScheduledReplica
 	node2.Status.DiskStatus = map[string]*longhorn.DiskStatus{
 		getDiskID(TestNode2, "1"): {
@@ -1071,7 +1071,7 @@ func (s *TestSuite) TestReplicaScheduler(c *C) {
 	}
 	alreadyScheduledReplica = newReplicaForVolume(tc.volume)
 	alreadyScheduledReplica.Spec.NodeID = TestNode3
-	alreadyScheduledReplica.Spec.EvictionRequested = false
+	alreadyScheduledReplica.Spec.EvictionRequestedManual = false
 	tc.allReplicas[alreadyScheduledReplica.Name] = alreadyScheduledReplica
 	node3.Status.DiskStatus = map[string]*longhorn.DiskStatus{
 		getDiskID(TestNode3, "1"): {
@@ -1363,7 +1363,7 @@ func (s *TestSuite) TestGetCurrentNodesAndZones(c *C) {
 				InstanceSpec: longhorn.InstanceSpec{
 					NodeID: nodeName,
 				},
-				EvictionRequested: evictionRequested,
+				EvictionRequestedManual: evictionRequested,
 			},
 		}
 	}

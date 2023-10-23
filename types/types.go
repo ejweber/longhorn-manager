@@ -1066,3 +1066,7 @@ func GetBackupTargetSchemeFromURL(backupTargetURL string) string {
 		return ValueUnknown
 	}
 }
+
+func IsReplicaEvictionRequested(replica *longhorn.Replica) bool {
+	return replica.Spec.EvictionRequestedAuto || replica.Spec.EvictionRequestedManual
+}

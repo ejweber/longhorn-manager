@@ -134,7 +134,7 @@ func (rcs *ReplicaScheduler) getNodeCandidates(nodesInfo map[string]*longhorn.No
 func getNodesWithEvictingReplicas(replicas map[string]*longhorn.Replica, nodeInfo map[string]*longhorn.Node) map[string]*longhorn.Node {
 	nodesWithEvictingReplicas := map[string]*longhorn.Node{}
 	for _, r := range replicas {
-		if r.Spec.EvictionRequested {
+		if types.IsReplicaEvictionRequested(r) {
 			if node, ok := nodeInfo[r.Spec.NodeID]; ok {
 				nodesWithEvictingReplicas[r.Spec.NodeID] = node
 			}
@@ -584,7 +584,7 @@ func (rcs *ReplicaScheduler) isFailedReplicaReusable(r *longhorn.Replica, v *lon
 	if r.Spec.RebuildRetryCount >= FailedReplicaMaxRetryCount {
 		return false, nil
 	}
-	if r.Spec.EvictionRequested {
+	if types.IsReplicaEvictionRequested(r) {
 		return false, nil
 	}
 	if hardNodeAffinity != "" && r.Spec.NodeID != hardNodeAffinity {
@@ -668,7 +668,7 @@ func IsPotentiallyReusableReplica(r *longhorn.Replica, hardNodeAffinity string) 
 	if r.Spec.RebuildRetryCount >= FailedReplicaMaxRetryCount {
 		return false
 	}
-	if r.Spec.EvictionRequested {
+	if types.IsReplicaEvictionRequested(r) {
 		return false
 	}
 	if hardNodeAffinity != "" && r.Spec.NodeID != hardNodeAffinity {
@@ -802,7 +802,7 @@ func getCurrentNodesAndZones(replicas map[string]*longhorn.Replica, nodeInfo map
 	for _, r := range replicas {
 		if r.Spec.NodeID != "" && r.DeletionTimestamp == nil && r.Spec.FailedAt == "" {
 			if node, ok := nodeInfo[r.Spec.NodeID]; ok {
-				if r.Spec.EvictionRequested {
+				if types.IsReplicaEvictionRequested(r) {
 					if _, ok := usedNodes[r.Spec.NodeID]; !ok {
 						// This is an evicting replica on a thus far unused node. We won't change this again unless we
 						// find a non-evicting replica on this node.
@@ -827,4 +827,8 @@ func getCurrentNodesAndZones(replicas map[string]*longhorn.Replica, nodeInfo map
 	}
 
 	return usedNodes, usedZones, onlyEvictingNodes, onlyEvictingZones
+}
+
+func isEvictionRequsted(r *longhorn.Replica) {
+
 }

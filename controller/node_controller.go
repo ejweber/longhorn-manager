@@ -1487,12 +1487,8 @@ func (nc *NodeController) syncReplicaEvictionRequested(node *longhorn.Node) erro
 				return err
 			}
 			shouldEvictReplica := nc.shouldEvictReplica(node, &diskSpec, replica)
-			if shouldEvictReplica && replica.Spec.EvictionRequested != longhorn.ReplicaEvictionRequestedManual {
-				replica.Spec.EvictionRequested = longhorn.ReplicaEvictionRequestedManual
-				replicasToSync = append(replicasToSync, replica)
-			}
-			if !shouldEvictReplica && replica.Spec.EvictionRequested == longhorn.ReplicaEvictionRequestedManual {
-				replica.Spec.EvictionRequested = ""
+			if replica.Spec.EvictionRequestedManual != shouldEvictReplica {
+				replica.Spec.EvictionRequestedManual = shouldEvictReplica
 				replicasToSync = append(replicasToSync, replica)
 			}
 		}
@@ -1500,9 +1496,9 @@ func (nc *NodeController) syncReplicaEvictionRequested(node *longhorn.Node) erro
 
 	for _, replica := range replicasToSync {
 		log := getLoggerForNode(nc.logger, node).WithField("replica", replica.Name)
-		log.Infof("Updating evictionRequested to %t", replica.Spec.EvictionRequested)
+		log.Infof("Updating evictionRequestedManual to %t", replica.Spec.EvictionRequestedManual)
 		if _, err := nc.ds.UpdateReplica(replica); err != nil {
-			log.Warn("Failed to update evictionRequested, will enqueue then resync node")
+			log.Warn("Failed to update evictionRequestedManual, will enqueue then resync node")
 			nc.enqueueNode(node)
 			continue
 		}
@@ -1519,9 +1515,7 @@ func (nc *NodeController) shouldEvictReplica(node *longhorn.Node, diskSpec *long
 		cond.Reason == string(longhorn.NodeConditionReasonKubernetesNodeNotReady) {
 		return false
 	}
-
-	// Check if node has requested eviction or is attempting to auto-evict replicas.
-	if node.Spec.EvictionRequested || node.Status.AutoEvicting {
+	if node.Spec.EvictionRequested {
 		return true
 	}
 	return diskSpec.EvictionRequested

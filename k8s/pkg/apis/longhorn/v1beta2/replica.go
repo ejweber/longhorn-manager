@@ -19,9 +19,6 @@ const (
 
 	ReplicaConditionReasonRebuildFailedDisconnection = "Disconnection"
 	ReplicaConditionReasonRebuildFailedGeneral       = "General"
-
-	ReplicaEvictionRequestedManual = ReplicaEvictionRequested("manual")
-	ReplicaEvictionRequestedAuto   = ReplicaEvictionRequested("auto")
 )
 
 // ReplicaSpec defines the desired state of the Longhorn replica
@@ -52,13 +49,15 @@ type ReplicaSpec struct {
 	// +optional
 	RebuildRetryCount int `json:"rebuildRetryCount"`
 	// +optional
-	EvictionRequested ReplicaEvictionRequested `json:"evictionRequested"`
+	EvictionRequestedAuto bool `json:"evictionRequestedAuto"`
+	// +optional
+	EvictionRequestedManual bool `json:"evictionRequestedManual"`
 }
 
 // ReplicaStatus defines the observed state of the Longhorn replica
 type ReplicaStatus struct {
 	InstanceStatus `json:""`
-	// Deprecated: Replaced by field `spec.evictionRequested`.
+	// Deprecated: Replaced by field `spec.evictionRequestedAuto` `spec.evictionRequestedManual`.
 	// +optional
 	EvictionRequested bool `json:"evictionRequested"`
 }

@@ -690,8 +690,6 @@ func (imc *InstanceManagerController) deleteInstanceManagerPDB(im *longhorn.Inst
 }
 
 func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.InstanceManager) (bool, error) {
-	log := getLoggerForInstanceManager(imc.logger, im)
-
 	// If there is no engine instance process inside the engine instance manager,
 	// it means that all volumes are detached.
 	// We can delete the PodDisruptionBudget for the engine instance manager.
@@ -734,9 +732,15 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 		return false, err
 	}
 
+	node, err := imc.ds.GetNode(imc.controllerID)
+	if err != nil {
+		return false, err
+	}
 	if nodeDrainingPolicy == string(types.NodeDrainPolicyBlockForEviction) && len(replicasOnCurrentNode) > 0 {
-		// We must wait for ALL replicas to be evicted before removing the PDB. The node controller will handle eviction
-		// requests.
+		if node.Status.AutoEvicting {
+			// With this drain policy, we should try to evict all replicas.
+			imc.autoEvictReplicas(im, replicasOnCurrentNode)
+		}
 		return false, nil
 	}
 
@@ -753,14 +757,14 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 
 	// For each replica in the target replica list, find out whether there is a PDB protected healthy replica of the
 	// same volume on another schedulable node.
-	unprotectedReplicas := []*longhorn.Replica{}
+	unprotectedReplicas := map[string]*longhorn.Replica{}
 	for _, replica := range targetReplicas {
 		replicaIsProtected, err := imc.replicaIsProtected(im, replica)
 		if err != nil {
 			return false, err
 		}
 		if !replicaIsProtected {
-			unprotectedReplicas = append(unprotectedReplicas, replica)
+			unprotectedReplicas[replica.Name] = replica
 		}
 	}
 
@@ -768,25 +772,27 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 		return true, nil
 	}
 
-	node, err := imc.ds.GetNode(imc.controllerID)
-	if err != nil {
-		return false, err
-	}
-	if node.Status.AutoEvicting {
+	if nodeDrainingPolicy == string(types.NodeDrainPolicyBlockForEvictionIfContainsLastReplica) &&
+		node.Status.AutoEvicting {
 		// With this drain policy, we should try to evict unprotected replicas.
-		for _, replica := range unprotectedReplicas {
-			if replica.Spec.EvictionRequested == "" {
-				replicaLog := log.WithField("replica", replica.Name)
-				replicaLog.Infof("Requesting replica eviction")
-				replica.Spec.EvictionRequested = longhorn.ReplicaEvictionRequestedAuto
-				if _, err = imc.ds.UpdateReplica(replica); err != nil {
-					replicaLog.Errorf("Failed to request replica eviction, will requeue then resync instance manager: %v", err)
-				}
-			}
-		}
+		imc.autoEvictReplicas(im, unprotectedReplicas)
 	}
 
 	return false, nil
+}
+
+func (imc *InstanceManagerController) autoEvictReplicas(im *longhorn.InstanceManager, replicas map[string]*longhorn.Replica) {
+	log := getLoggerForInstanceManager(imc.logger, im)
+	for _, replica := range replicas {
+		if !replica.Spec.EvictionRequestedAuto {
+			replicaLog := log.WithField("replica", replica.Name)
+			replicaLog.Infof("Requesting automatic replica eviction")
+			replica.Spec.EvictionRequestedAuto = true
+			if _, err := imc.ds.UpdateReplica(replica); err != nil {
+				replicaLog.Errorf("Failed to request replica automatic eviction, will requeue then resync instance manager: %v", err)
+			}
+		}
+	}
 }
 
 func (imc *InstanceManagerController) replicaIsProtected(im *longhorn.InstanceManager,

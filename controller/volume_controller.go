@@ -515,7 +515,7 @@ func (c *VolumeController) EvictReplicas(v *longhorn.Volume,
 	hasNewReplica := false
 	healthyNonEvictingCount := healthyCount
 	for _, replica := range rs {
-		if replica.Spec.EvictionRequested &&
+		if types.IsReplicaEvictionRequested(replica) &&
 			e.Status.ReplicaModeMap[replica.Name] == longhorn.ReplicaModeRW {
 			healthyNonEvictingCount--
 		}
@@ -1030,7 +1030,7 @@ func (c *VolumeController) cleanupEvictionRequestedReplicas(v *longhorn.Volume, 
 		if !datastore.IsAvailableHealthyReplica(r) {
 			continue
 		}
-		if !r.Spec.EvictionRequested {
+		if !types.IsReplicaEvictionRequested(r) {
 			hasNonEvictingHealthyReplica = true
 			break
 		}
@@ -1038,7 +1038,7 @@ func (c *VolumeController) cleanupEvictionRequestedReplicas(v *longhorn.Volume, 
 	}
 
 	for _, r := range rs {
-		if !r.Spec.EvictionRequested {
+		if !types.IsReplicaEvictionRequested(r) {
 			continue
 		}
 		if !hasNonEvictingHealthyReplica && r.Name == evictingHealthyReplica {
@@ -2474,7 +2474,7 @@ func (c *VolumeController) getReplenishReplicasCount(v *longhorn.Volume, rs map[
 			continue
 		}
 		// Skip the replica has been requested eviction.
-		if r.Spec.FailedAt == "" && (!r.Spec.EvictionRequested) && r.Spec.Active {
+		if r.Spec.FailedAt == "" && !types.IsReplicaEvictionRequested(r) && r.Spec.Active {
 			usableCount++
 		}
 	}

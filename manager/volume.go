@@ -715,7 +715,7 @@ func (m *VolumeManager) DeleteReplica(volumeName, replicaName string) error {
 		if !datastore.IsAvailableHealthyReplica(r) {
 			continue
 		}
-		if r.Spec.EvictionRequested {
+		if types.IsReplicaEvictionRequested(r) {
 			continue
 		}
 		healthyReplica = r.Name
