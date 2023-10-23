@@ -497,6 +497,10 @@ func (nc *NodeController) syncNode(key string) (err error) {
 		return err
 	}
 
+	if err = nc.syncReplicaEvictionRequested(node); err != nil {
+		return err
+	}
+
 	if nc.controllerID != node.Name {
 		return nil
 	}
@@ -1464,4 +1468,51 @@ func (nc *NodeController) syncAutoEvictingStatus(node *longhorn.Node, kubeNode *
 		log.Infof("Changed auto eviction status to %t", node.Status.AutoEvicting)
 	}
 	return nil
+}
+
+func (nc *NodeController) syncReplicaEvictionRequested(node *longhorn.Node) error {
+	replicasToSync := []*longhorn.Replica{}
+
+	for diskName, diskSpec := range node.Spec.Disks {
+		diskStatus := node.Status.DiskStatus[diskName]
+		for replicaName := range diskStatus.ScheduledReplica {
+			replica, err := nc.ds.GetReplica(replicaName)
+			if err != nil {
+				return err
+			}
+			shouldEvictReplica := nc.shouldEvictReplica(node, &diskSpec, replica)
+			if replica.Spec.EvictionRequested != shouldEvictReplica {
+				replica.Spec.EvictionRequested = shouldEvictReplica
+				replicasToSync = append(replicasToSync, replica)
+			}
+		}
+	}
+
+	for _, replica := range replicasToSync {
+		log := getLoggerForNode(nc.logger, node).WithField("replica", replica.Name)
+		log.Infof("Updating evictionRequested to %t", replica.Spec.EvictionRequested)
+		if _, err := nc.ds.UpdateReplica(replica); err != nil {
+			log.Warn("Failed to update evictionRequested, will enqueue then resync node")
+			nc.enqueueNode(node)
+			continue
+		}
+	}
+
+	return nil
+}
+
+func (nc *NodeController) shouldEvictReplica(node *longhorn.Node, diskSpec *longhorn.DiskSpec, replica *longhorn.Replica) bool {
+	// TODO: Should we cancel evictions if a node is down or deleted?
+	// if isDownOrDeleted, err := rc.ds.IsNodeDownOrDeleted(replica.Spec.NodeID); err != nil {
+	// 	log.WithError(err).Warn("Failed to check if node is down or deleted")
+	// 	return false
+	// } else if isDownOrDeleted {
+	// 	return false
+	// }
+
+	// Check if node has requested eviction or is attempting to auto-evict replicas.
+	if node.Spec.EvictionRequested || node.Status.AutoEvicting {
+		return true
+	}
+	return diskSpec.EvictionRequested
 }
