@@ -1487,8 +1487,12 @@ func (nc *NodeController) syncReplicaEvictionRequested(node *longhorn.Node) erro
 				return err
 			}
 			shouldEvictReplica := nc.shouldEvictReplica(node, &diskSpec, replica)
-			if replica.Spec.EvictionRequested != shouldEvictReplica {
-				replica.Spec.EvictionRequested = shouldEvictReplica
+			if shouldEvictReplica && replica.Spec.EvictionRequested != longhorn.ReplicaEvictionRequestedManual {
+				replica.Spec.EvictionRequested = longhorn.ReplicaEvictionRequestedManual
+				replicasToSync = append(replicasToSync, replica)
+			}
+			if !shouldEvictReplica && replica.Spec.EvictionRequested == longhorn.ReplicaEvictionRequestedManual {
+				replica.Spec.EvictionRequested = ""
 				replicasToSync = append(replicasToSync, replica)
 			}
 		}

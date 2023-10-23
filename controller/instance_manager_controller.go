@@ -775,10 +775,10 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 	if node.Status.AutoEvicting {
 		// With this drain policy, we should try to evict unprotected replicas.
 		for _, replica := range unprotectedReplicas {
-			if !replica.Spec.EvictionRequested {
+			if replica.Spec.EvictionRequested == "" {
 				replicaLog := log.WithField("replica", replica.Name)
 				replicaLog.Infof("Requesting replica eviction")
-				replica.Spec.EvictionRequested = true
+				replica.Spec.EvictionRequested = longhorn.ReplicaEvictionRequestedAuto
 				if _, err = imc.ds.UpdateReplica(replica); err != nil {
 					replicaLog.Errorf("Failed to request replica eviction, will requeue then resync instance manager: %v", err)
 				}

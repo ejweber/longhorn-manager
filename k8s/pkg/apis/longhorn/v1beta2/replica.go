@@ -9,6 +9,8 @@ const (
 	ReplicaRebuildFailedUnavailableErrorMSG      = "rpc error: code = Unavailable"
 )
 
+type ReplicaEvictionRequested string
+
 const (
 	ReplicaConditionTypeRebuildFailed                = "RebuildFailed"
 	ReplicaConditionTypeWaitForBackingImage          = "WaitForBackingImage"
@@ -17,6 +19,9 @@ const (
 
 	ReplicaConditionReasonRebuildFailedDisconnection = "Disconnection"
 	ReplicaConditionReasonRebuildFailedGeneral       = "General"
+
+	ReplicaEvictionRequestedManual = ReplicaEvictionRequested("manual")
+	ReplicaEvictionRequestedAuto   = ReplicaEvictionRequested("auto")
 )
 
 // ReplicaSpec defines the desired state of the Longhorn replica
@@ -47,7 +52,7 @@ type ReplicaSpec struct {
 	// +optional
 	RebuildRetryCount int `json:"rebuildRetryCount"`
 	// +optional
-	EvictionRequested bool `json:"evictionRequested"`
+	EvictionRequested ReplicaEvictionRequested `json:"evictionRequested"`
 }
 
 // ReplicaStatus defines the observed state of the Longhorn replica
