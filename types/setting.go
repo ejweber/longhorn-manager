@@ -1160,10 +1160,11 @@ const (
 type NodeDrainPolicy string
 
 const (
-	NodeDrainPolicyBlockForEviction           = NodeDrainPolicy("block-for-eviction")
-	NodeDrainPolicyBlockIfContainsLastReplica = NodeDrainPolicy("block-if-contains-last-replica")
-	NodeDrainPolicyAllowIfReplicaIsStopped    = NodeDrainPolicy("allow-if-replica-is-stopped")
-	NodeDrainPolicyAlwaysAllow                = NodeDrainPolicy("always-allow")
+	NodeDrainPolicyBlockForEviction                      = NodeDrainPolicy("block-for-eviction")
+	NodeDrainPolicyBlockForEvictionIfContainsLastReplica = NodeDrainPolicy("block-for-eviction-if-contains-last-replica")
+	NodeDrainPolicyBlockIfContainsLastReplica            = NodeDrainPolicy("block-if-contains-last-replica")
+	NodeDrainPolicyAllowIfReplicaIsStopped               = NodeDrainPolicy("allow-if-replica-is-stopped")
+	NodeDrainPolicyAlwaysAllow                           = NodeDrainPolicy("always-allow")
 )
 
 type SystemManagedPodsImagePullPolicy string
