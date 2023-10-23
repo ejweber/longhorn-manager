@@ -690,6 +690,8 @@ func (imc *InstanceManagerController) deleteInstanceManagerPDB(im *longhorn.Inst
 }
 
 func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.InstanceManager) (bool, error) {
+	log := getLoggerForInstanceManager(imc.logger, im)
+
 	// If there is no engine instance process inside the engine instance manager,
 	// it means that all volumes are detached.
 	// We can delete the PodDisruptionBudget for the engine instance manager.
@@ -724,7 +726,7 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 		return true, nil
 	}
 
-	replicasOnCurrentNode, err := imc.ds.ListReplicasByNodeRO(im.Spec.NodeID)
+	replicasOnCurrentNode, err := imc.ds.ListReplicasByNode(im.Spec.NodeID)
 	if err != nil {
 		if datastore.ErrorIsNotFound(err) {
 			return true, nil
@@ -733,86 +735,118 @@ func (imc *InstanceManagerController) canDeleteInstanceManagerPDB(im *longhorn.I
 	}
 
 	if nodeDrainingPolicy == string(types.NodeDrainPolicyBlockForEviction) && len(replicasOnCurrentNode) > 0 {
-		// We must wait for ALL replicas to be evicted before removing the PDB.
+		// We must wait for ALL replicas to be evicted before removing the PDB. The node controller will handle eviction
+		// requests.
 		return false, nil
 	}
 
-	targetReplicas := []*longhorn.Replica{}
+	targetReplicas := map[string]*longhorn.Replica{}
 	if nodeDrainingPolicy == string(types.NodeDrainPolicyAllowIfReplicaIsStopped) {
 		for _, replica := range replicasOnCurrentNode {
 			if replica.Spec.DesireState != longhorn.InstanceStateStopped || replica.Status.CurrentState != longhorn.InstanceStateStopped {
-				targetReplicas = append(targetReplicas, replica)
+				targetReplicas[replica.Name] = replica
 			}
 		}
 	} else {
 		targetReplicas = replicasOnCurrentNode
 	}
 
-	// For each replica in the target replica list,
-	// find out whether there is a PDB protected healthy replica of the same
-	// volume on another schedulable node.
+	// For each replica in the target replica list, find out whether there is a PDB protected healthy replica of the
+	// same volume on another schedulable node.
+	unprotectedReplicas := []*longhorn.Replica{}
 	for _, replica := range targetReplicas {
-		vol, err := imc.ds.GetVolume(replica.Spec.VolumeName)
+		replicaIsProtected, err := imc.replicaIsProtected(im, replica)
 		if err != nil {
 			return false, err
 		}
-
-		replicas, err := imc.ds.ListVolumeReplicas(vol.Name)
-		if err != nil {
-			return false, err
-		}
-
-		hasPDBOnAnotherNode := false
-		isUnusedReplicaOnCurrentNode := false
-		for _, r := range replicas {
-			hasOtherHealthyReplicas := r.Spec.HealthyAt != "" && r.Spec.FailedAt == "" && r.Spec.NodeID != im.Spec.NodeID
-			if hasOtherHealthyReplicas {
-				unschedulable, err := imc.ds.IsKubeNodeUnschedulable(r.Spec.NodeID)
-				if err != nil {
-					return false, err
-				}
-				if unschedulable {
-					continue
-				}
-
-				var rIM *longhorn.InstanceManager
-				rIM, err = imc.getRunningReplicaInstancManager(r)
-				if err != nil {
-					return false, err
-				}
-				if rIM == nil {
-					continue
-				}
-
-				pdb, err := imc.ds.GetPDBRO(imc.getPDBName(rIM))
-				if err != nil && !datastore.ErrorIsNotFound(err) {
-					return false, err
-				}
-				if pdb != nil {
-					hasPDBOnAnotherNode = true
-					break
-				}
-			}
-			// If a replica has never been started, there is no data stored in this replica, and
-			// retaining it makes no sense for HA.
-			// Hence Longhorn doesn't need to block the PDB removal for the replica.
-			// This case typically happens on a newly created volume that hasn't been attached to any node.
-			// https://github.com/longhorn/longhorn/issues/2673
-			isUnusedReplicaOnCurrentNode = r.Spec.HealthyAt == "" && r.Spec.FailedAt == "" && r.Spec.NodeID == im.Spec.NodeID
-			if isUnusedReplicaOnCurrentNode {
-				break
-			}
-		}
-
-		if !hasPDBOnAnotherNode && !isUnusedReplicaOnCurrentNode {
-			return false, nil
+		if !replicaIsProtected {
+			unprotectedReplicas = append(unprotectedReplicas, replica)
 		}
 	}
 
-	return true, nil
+	if len(unprotectedReplicas) == 0 {
+		return true, nil
+	}
+
+	node, err := imc.ds.GetNode(imc.controllerID)
+	if err != nil {
+		return false, err
+	}
+	if node.Status.AutoEvicting {
+		// With this drain policy, we should try to evict unprotected replicas.
+		for _, replica := range unprotectedReplicas {
+			if !replica.Spec.EvictionRequested {
+				replicaLog := log.WithField("replica", replica.Name)
+				replicaLog.Infof("Requesting replica eviction")
+				replica.Spec.EvictionRequested = true
+				if _, err = imc.ds.UpdateReplica(replica); err != nil {
+					replicaLog.Errorf("Failed to request replica eviction, will requeue then resync instance manager: %v", err)
+				}
+			}
+		}
+	}
+
+	return false, nil
 }
 
-func (imc *InstanceManagerController) getRunningReplicaInstancManager(r *longhorn.Replica) (im *longhorn.InstanceManager, err error) {
+func (imc *InstanceManagerController) replicaIsProtected(im *longhorn.InstanceManager,
+	replica *longhorn.Replica) (bool, error) {
+	vol, err := imc.ds.GetVolume(replica.Spec.VolumeName)
+	if err != nil {
+		return false, err
+	}
+
+	replicas, err := imc.ds.ListVolumeReplicas(vol.Name)
+	if err != nil {
+		return false, err
+	}
+
+	hasPDBOnAnotherNode := false
+	isUnusedReplicaOnCurrentNode := false
+	for _, r := range replicas {
+		hasOtherHealthyReplicas := r.Spec.HealthyAt != "" && r.Spec.FailedAt == "" && r.Spec.NodeID != im.Spec.NodeID
+		if hasOtherHealthyReplicas {
+			unschedulable, err := imc.ds.IsKubeNodeUnschedulable(r.Spec.NodeID)
+			if err != nil {
+				return false, err
+			}
+			if unschedulable {
+				continue
+			}
+
+			var rIM *longhorn.InstanceManager
+			rIM, err = imc.getRunningReplicaInstanceManager(r)
+			if err != nil {
+				return false, err
+			}
+			if rIM == nil {
+				continue
+			}
+
+			pdb, err := imc.ds.GetPDBRO(imc.getPDBName(rIM))
+			if err != nil && !datastore.ErrorIsNotFound(err) {
+				return false, err
+			}
+			if pdb != nil {
+				hasPDBOnAnotherNode = true
+				break
+			}
+		}
+		// If a replica has never been started, there is no data stored in this replica, and
+		// retaining it makes no sense for HA.
+		// Hence Longhorn doesn't need to block the PDB removal for the replica.
+		// This case typically happens on a newly created volume that hasn't been attached to any node.
+		// https://github.com/longhorn/longhorn/issues/2673
+		isUnusedReplicaOnCurrentNode = r.Spec.HealthyAt == "" && r.Spec.FailedAt == "" && r.Spec.NodeID == im.Spec.NodeID
+		if isUnusedReplicaOnCurrentNode {
+			break
+		}
+	}
+
+	return hasPDBOnAnotherNode || isUnusedReplicaOnCurrentNode, nil
+}
+
+func (imc *InstanceManagerController) getRunningReplicaInstanceManager(r *longhorn.Replica) (im *longhorn.InstanceManager, err error) {
 	if r.Status.InstanceManagerName == "" {
 		im, err = imc.ds.GetInstanceManagerByInstance(r)
 		if err != nil && !types.ErrorIsNotFound(err) {

@@ -493,14 +493,6 @@ func (nc *NodeController) syncNode(key string) (err error) {
 		node.Status.Region, node.Status.Zone = types.GetRegionAndZone(kubeNode.Labels)
 	}
 
-	if err = nc.syncAutoEvictingStatus(node, kubeNode); err != nil {
-		return err
-	}
-
-	if err = nc.syncReplicaEvictionRequested(node); err != nil {
-		return err
-	}
-
 	if nc.controllerID != node.Name {
 		return nil
 	}
@@ -559,6 +551,20 @@ func (nc *NodeController) syncNode(key string) (err error) {
 
 	if err := nc.syncOrphans(node, collectedDiskInfo); err != nil {
 		return err
+	}
+
+	if err = nc.syncAutoEvictingStatus(node, kubeNode); err != nil {
+		return err
+	}
+
+	if existingNode.Status.AutoEvicting == node.Status.AutoEvicting {
+		if err = nc.syncReplicaEvictionRequested(node); err != nil {
+			return err
+		}
+	} else {
+		// We need to update auto eviction status before we consider switching evictionRequested on individual replicas.
+		// Otherwise, we may race the instance manager controller.
+		nc.enqueueNode(node)
 	}
 
 	return nil
@@ -1502,13 +1508,13 @@ func (nc *NodeController) syncReplicaEvictionRequested(node *longhorn.Node) erro
 }
 
 func (nc *NodeController) shouldEvictReplica(node *longhorn.Node, diskSpec *longhorn.DiskSpec, replica *longhorn.Replica) bool {
-	// TODO: Should we cancel evictions if a node is down or deleted?
-	// if isDownOrDeleted, err := rc.ds.IsNodeDownOrDeleted(replica.Spec.NodeID); err != nil {
-	// 	log.WithError(err).Warn("Failed to check if node is down or deleted")
-	// 	return false
-	// } else if isDownOrDeleted {
-	// 	return false
-	// }
+	// TODO: Previously we would cancel eviction if a corresponding Kubernetes node was down or deleted. Should we do
+	// that still?
+	cond := types.GetCondition(node.Status.Conditions, longhorn.NodeConditionTypeReady)
+	if cond.Status == longhorn.ConditionStatusFalse &&
+		cond.Reason == string(longhorn.NodeConditionReasonKubernetesNodeNotReady) {
+		return false
+	}
 
 	// Check if node has requested eviction or is attempting to auto-evict replicas.
 	if node.Spec.EvictionRequested || node.Status.AutoEvicting {
