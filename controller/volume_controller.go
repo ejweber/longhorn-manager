@@ -3627,6 +3627,10 @@ func (vc *VolumeController) prepareReplicasAndEngineForMigration(v *longhorn.Vol
 			case longhorn.ReplicaModeRW:
 				currentAvailableReplicas[dataPath] = r
 			case "":
+				if _, ok := currentEngine.Spec.ReplicaAddressMap[r.Name]; ok {
+					log.Debugf("Need to revert rather than starting migration since the current replica %v is already in the engine spec, which means it may start rebuilding", r.Name)
+					return false, true, nil
+				}
 				log.Warnf("Running replica %v wasn't added to engine, will ignore it and continue migration", r.Name)
 			default:
 				log.Warnf("Unexpected mode %v for the current replica %v, will ignore it and continue migration", currentEngine.Status.ReplicaModeMap[r.Name], r.Name)
