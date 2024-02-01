@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
+	"time"
 
 	_ "net/http/pprof" // for runtime profiling
 
@@ -222,6 +224,21 @@ func startManager(c *cli.Context) error {
 		logger.Infof("Debug Server listening on %s", debugAddress)
 		if err := http.ListenAndServe(debugAddress, debugHandler); err != nil && err != http.ErrServerClosed {
 			logger.Errorf(fmt.Sprintf("ListenAndServe: %s", err))
+		}
+	}()
+
+	go func() {
+		memstats := &runtime.MemStats{}
+		for {
+			runtime.ReadMemStats(memstats)
+			logger.Infof("TotalAlloc: %v\n", memstats.TotalAlloc)
+			logger.Infof("HeapSys: %v\n", memstats.HeapSys)
+			logger.Infof("HeapInUse: %v\n", memstats.HeapInuse)
+			logger.Infof("HeapIdle: %v\n", memstats.HeapIdle)
+			logger.Infof("HeapReleased: %v\n", memstats.HeapReleased)
+			logger.Infof("StackInUse: %v\n", memstats.StackInuse)
+			logger.Infof("LastGC: %v\n", time.Unix(0, int64(memstats.LastGC)))
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
