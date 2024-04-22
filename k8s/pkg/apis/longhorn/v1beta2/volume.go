@@ -160,6 +160,15 @@ const (
 	ReplicaDiskSoftAntiAffinityDisabled = ReplicaDiskSoftAntiAffinity("disabled")
 )
 
+// +kubebuilder:validation:Enum=ignored;enabled;disabled
+type FreezeFSForSnapshot string
+
+const (
+	FreezeFSForSnapshotDefault  = FreezeFSForSnapshot("ignored")
+	FreezeFSForSnapshotEnabled  = FreezeFSForSnapshot("enabled")
+	FreezeFSForSnapshotDisabled = FreezeFSForSnapshot("disabled")
+)
+
 // Deprecated.
 type BackendStoreDriverType string
 
@@ -298,6 +307,9 @@ type VolumeSpec struct {
 	// +kubebuilder:validation:Type=string
 	// +optional
 	SnapshotMaxSize int64 `json:"snapshotMaxSize,string"`
+	// Freeze the file system on the root partition before taking a snapshot.
+	// +optional
+	FreezeFSForSnapshot FreezeFSForSnapshot `json:"freezeFSForSnapshot"`
 }
 
 // VolumeStatus defines the observed state of the Longhorn volume

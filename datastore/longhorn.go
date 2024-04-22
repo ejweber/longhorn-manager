@@ -5061,3 +5061,16 @@ func (s *DataStore) ListBackupBackingImages() (map[string]*longhorn.BackupBackin
 func (s *DataStore) ListBackupBackingImagesRO() ([]*longhorn.BackupBackingImage, error) {
 	return s.backupBackingImageLister.BackupBackingImages(s.namespace).List(labels.Everything())
 }
+
+func (s *DataStore) GetFreezeFSForSnapshotSettingForEngine(e *longhorn.Engine) (bool, error) {
+	volume, err := s.GetVolumeRO(e.Spec.VolumeName)
+	if err != nil {
+		return false, err
+	}
+
+	if volume.Spec.FreezeFSForSnapshot != longhorn.FreezeFSForSnapshotDefault {
+		return volume.Spec.FreezeFSForSnapshot == longhorn.FreezeFSForSnapshotEnabled, nil
+	}
+
+	return s.GetSettingAsBool(types.SettingNameFreezeFSForSnapshot)
+}

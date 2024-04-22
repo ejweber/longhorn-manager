@@ -24,6 +24,10 @@ func UpgradeResources(namespace string, lhClient *lhclientset.Clientset, kubeCli
 		return err
 	}
 
+	if err := upgradeVolumes(namespace, lhClient, resourceMaps); err != nil {
+		return err
+	}
+
 	return upgradeNodes(namespace, lhClient, resourceMaps)
 }
 
@@ -114,6 +118,28 @@ func upgradeNodes(namespace string, lhClient *lhclientset.Clientset, resourceMap
 		}
 
 		nodeMap[key] = node
+	}
+
+	return nil
+}
+
+func upgradeVolumes(namespace string, lhClient *lhclientset.Clientset, resourceMaps map[string]interface{}) (err error) {
+	defer func() {
+		err = errors.Wrapf(err, upgradeLogPrefix+"upgrade volume failed")
+	}()
+
+	volumeMap, err := upgradeutil.ListAndUpdateVolumesInProvidedCache(namespace, lhClient, resourceMaps)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return errors.Wrapf(err, "failed to list all existing Longhorn volumes during the volume upgrade")
+	}
+
+	for _, volume := range volumeMap {
+		if volume.Spec.FreezeFSForSnapshot == "" {
+			volume.Spec.FreezeFSForSnapshot = longhorn.FreezeFSForSnapshotDefault
+		}
 	}
 
 	return nil

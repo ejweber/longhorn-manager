@@ -162,7 +162,8 @@ func (e *EngineSimulator) SimulateStopReplica(addr string) error {
 	return nil
 }
 
-func (e *EngineSimulator) SnapshotCreate(engine *longhorn.Engine, name string, labels map[string]string) (string, error) {
+func (e *EngineSimulator) SnapshotCreate(engine *longhorn.Engine, name string, labels map[string]string,
+	freezeFS bool) (string, error) {
 	return "", fmt.Errorf(ErrNotImplement)
 }
 

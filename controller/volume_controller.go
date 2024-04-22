@@ -4510,6 +4510,11 @@ func (c *VolumeController) createSnapshot(snapshotName string, labels map[string
 		return nil, err
 	}
 
+	freezeFS, err := c.ds.GetFreezeFSForSnapshotSettingForEngine(e)
+	if err != nil {
+		return nil, err
+	}
+
 	engineCliClient, err := engineapi.GetEngineBinaryClient(c.ds, volume.Name, c.controllerID)
 	if err != nil {
 		return nil, err
@@ -4534,7 +4539,7 @@ func (c *VolumeController) createSnapshot(snapshotName string, labels map[string
 		}
 	}
 
-	snapshotName, err = engineClientProxy.SnapshotCreate(e, snapshotName, labels)
+	snapshotName, err = engineClientProxy.SnapshotCreate(e, snapshotName, labels, freezeFS)
 	if err != nil {
 		return nil, err
 	}

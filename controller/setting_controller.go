@@ -1483,6 +1483,7 @@ const (
 	ClusterInfoVolumeRestoreVolumeRecurringJobCountFmt   = "LonghornVolumeRestoreVolumeRecurringJob%sCount"
 	ClusterInfoVolumeSnapshotDataIntegrityCountFmt       = "LonghornVolumeSnapshotDataIntegrity%sCount"
 	ClusterInfoVolumeUnmapMarkSnapChainRemovedCountFmt   = "LonghornVolumeUnmapMarkSnapChainRemoved%sCount"
+	ClusterInfoVolumeFreezeFSForSnapshotCountFmt         = "LonghornVolumeFreezeFSForSnapshot%sCount"
 )
 
 // Node Scope Info: will be sent from all Longhorn cluster nodes
@@ -1769,6 +1770,7 @@ func (info *ClusterInfo) collectVolumesInfo() error {
 	restoreVolumeRecurringJobCountStruct := newStruct()
 	snapshotDataIntegrityCountStruct := newStruct()
 	unmapMarkSnapChainRemovedCountStruct := newStruct()
+	freezeFSForSnapshotCountStruct := newStruct()
 	for _, volume := range volumesRO {
 		dataEngine := types.ValueUnknown
 		if volume.Spec.DataEngine != "" {
@@ -1825,6 +1827,9 @@ func (info *ClusterInfo) collectVolumesInfo() error {
 
 		unmapMarkSnapChainRemoved := info.collectSettingInVolume(string(volume.Spec.UnmapMarkSnapChainRemoved), string(longhorn.UnmapMarkSnapChainRemovedIgnored), types.SettingNameRemoveSnapshotsDuringFilesystemTrim)
 		unmapMarkSnapChainRemovedCountStruct[util.StructName(fmt.Sprintf(ClusterInfoVolumeUnmapMarkSnapChainRemovedCountFmt, util.ConvertToCamel(string(unmapMarkSnapChainRemoved), "-")))]++
+
+		freezeFSForSnapshot := info.collectSettingInVolume(string(volume.Spec.FreezeFSForSnapshot), string(longhorn.FreezeFSForSnapshotDefault), types.SettingNameFreezeFSForSnapshot)
+		freezeFSForSnapshotCountStruct[util.StructName(fmt.Sprintf(ClusterInfoVolumeFreezeFSForSnapshotCountFmt, util.ConvertToCamel(string(freezeFSForSnapshot), "-")))]++
 	}
 	info.structFields.fields.AppendCounted(accessModeCountStruct)
 	info.structFields.fields.AppendCounted(dataEngineCountStruct)
@@ -1838,6 +1843,7 @@ func (info *ClusterInfo) collectVolumesInfo() error {
 	info.structFields.fields.AppendCounted(restoreVolumeRecurringJobCountStruct)
 	info.structFields.fields.AppendCounted(snapshotDataIntegrityCountStruct)
 	info.structFields.fields.AppendCounted(unmapMarkSnapChainRemovedCountStruct)
+	info.structFields.fields.AppendCounted(freezeFSForSnapshotCountStruct)
 
 	// TODO: Use the total volume count instead when v2 volume actual size is implemented.
 	//       https://github.com/longhorn/longhorn/issues/5947

@@ -62,6 +62,7 @@ type Volume struct {
 	OfflineReplicaRebuildingRequired bool                                   `json:"offlineReplicaRebuildingRequired"`
 	SnapshotMaxCount                 int                                    `json:"snapshotMaxCount"`
 	SnapshotMaxSize                  string                                 `json:"snapshotMaxSize"`
+	FreezeFSForSnapshot              longhorn.FreezeFSForSnapshot           `json:"freezeFSForSnapshot"`
 
 	DiskSelector         []string                      `json:"diskSelector"`
 	NodeSelector         []string                      `json:"nodeSelector"`
@@ -362,6 +363,10 @@ type UpdateSnapshotMaxSize struct {
 	SnapshotMaxSize string `json:"snapshotMaxSize"`
 }
 
+type UpdateFreezeFSForSnapshotInput struct {
+	FreezeFSForSnapshot string `json:"freezeFSForSnapshot"`
+}
+
 type PVCreateInput struct {
 	PVName string `json:"pvName"`
 	FSType string `json:"fsType"`
@@ -610,6 +615,7 @@ func NewSchema() *client.Schemas {
 	schemas.AddType("UpdateReplicaSoftAntiAffinityInput", UpdateReplicaSoftAntiAffinityInput{})
 	schemas.AddType("UpdateReplicaZoneSoftAntiAffinityInput", UpdateReplicaZoneSoftAntiAffinityInput{})
 	schemas.AddType("UpdateReplicaDiskSoftAntiAffinityInput", UpdateReplicaDiskSoftAntiAffinityInput{})
+	schemas.AddType("UpdateFreezeFSForSnapshotInput", UpdateFreezeFSForSnapshotInput{})
 	schemas.AddType("workloadStatus", longhorn.WorkloadStatus{})
 	schemas.AddType("cloneStatus", longhorn.VolumeCloneStatus{})
 	schemas.AddType("empty", Empty{})
@@ -991,6 +997,10 @@ func volumeSchema(volume *client.Schema) {
 
 		"updateReplicaDiskSoftAntiAffinity": {
 			Input: "UpdateReplicaDiskSoftAntiAffinityInput",
+		},
+
+		"updateFreezeFSForSnapshot": {
+			Input: "UpdateFreezeFSForSnapshotInput",
 		},
 
 		"pvCreate": {
@@ -1479,6 +1489,7 @@ func toVolumeResource(v *longhorn.Volume, ves []*longhorn.Engine, vrs []*longhor
 		DiskSelector:              v.Spec.DiskSelector,
 		NodeSelector:              v.Spec.NodeSelector,
 		RestoreVolumeRecurringJob: v.Spec.RestoreVolumeRecurringJob,
+		FreezeFSForSnapshot:       v.Spec.FreezeFSForSnapshot,
 
 		State:                            v.Status.State,
 		Robustness:                       v.Status.Robustness,
@@ -1556,6 +1567,7 @@ func toVolumeResource(v *longhorn.Volume, ves []*longhorn.Engine, vrs []*longhor
 			actions["updateReplicaSoftAntiAffinity"] = struct{}{}
 			actions["updateReplicaZoneSoftAntiAffinity"] = struct{}{}
 			actions["updateReplicaDiskSoftAntiAffinity"] = struct{}{}
+			actions["updateFreezeFSForSnapshot"] = struct{}{}
 			actions["recurringJobAdd"] = struct{}{}
 			actions["recurringJobDelete"] = struct{}{}
 			actions["recurringJobList"] = struct{}{}
@@ -1587,6 +1599,7 @@ func toVolumeResource(v *longhorn.Volume, ves []*longhorn.Engine, vrs []*longhor
 			actions["updateReplicaSoftAntiAffinity"] = struct{}{}
 			actions["updateReplicaZoneSoftAntiAffinity"] = struct{}{}
 			actions["updateReplicaDiskSoftAntiAffinity"] = struct{}{}
+			actions["updateFreezeFSForSnapshot"] = struct{}{}
 			actions["pvCreate"] = struct{}{}
 			actions["pvcCreate"] = struct{}{}
 			actions["cancelExpansion"] = struct{}{}

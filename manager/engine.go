@@ -100,13 +100,18 @@ func (m *VolumeManager) CreateSnapshot(snapshotName string, labels map[string]st
 		return nil, err
 	}
 
+	freezeFS, err := m.ds.GetFreezeFSForSnapshotSettingForEngine(e)
+	if err != nil {
+		return nil, err
+	}
+
 	engineClientProxy, err := engineapi.GetCompatibleClient(e, engineCliClient, m.ds, nil, m.proxyConnCounter)
 	if err != nil {
 		return nil, err
 	}
 	defer engineClientProxy.Close()
 
-	snapshotName, err = engineClientProxy.SnapshotCreate(e, snapshotName, labels)
+	snapshotName, err = engineClientProxy.SnapshotCreate(e, snapshotName, labels, freezeFS)
 	if err != nil {
 		return nil, err
 	}
