@@ -260,7 +260,7 @@ github.com/longhorn/longhorn-engine/pkg/meta
 github.com/longhorn/longhorn-engine/pkg/replica/client
 github.com/longhorn/longhorn-engine/pkg/types
 github.com/longhorn/longhorn-engine/pkg/util
-# github.com/longhorn/longhorn-instance-manager v1.7.0-dev.0.20240424110142-e60417f3506d => github.com/ejweber/longhorn-instance-manager v0.0.0-20240422203354-7e90a33cc747
+# github.com/longhorn/longhorn-instance-manager v1.7.0-dev.0.20240424110142-e60417f3506d => github.com/ejweber/longhorn-instance-manager v0.0.0-20240424213007-797b56753cd9
 ## explicit; go 1.22.2
 github.com/longhorn/longhorn-instance-manager/pkg/api
 github.com/longhorn/longhorn-instance-manager/pkg/client
@@ -1578,4 +1578,4 @@ sigs.k8s.io/yaml
 # k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.28.5
 # k8s.io/sample-controller => k8s.io/sample-controller v0.28.5
 # github.com/longhorn/types => github.com/ejweber/types v0.0.0-20240422202538-d2e6aa72f1ee
-# github.com/longhorn/longhorn-instance-manager => github.com/ejweber/longhorn-instance-manager v0.0.0-20240422203354-7e90a33cc747
+# github.com/longhorn/longhorn-instance-manager => github.com/ejweber/longhorn-instance-manager v0.0.0-20240424213007-797b56753cd9

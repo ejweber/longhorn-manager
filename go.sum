@@ -722,8 +722,8 @@ github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/ejweber/longhorn-instance-manager v0.0.0-20240422203354-7e90a33cc747 h1:FS9A0FHf2F3XjiSiq2kN/JqUZuSTWTgvG7x7rFNxon0=
-github.com/ejweber/longhorn-instance-manager v0.0.0-20240422203354-7e90a33cc747/go.mod h1:pLJpWyojmQFWWnvJwFDd5asIDlZZHOQdA2RsxuyJqVM=
+github.com/ejweber/longhorn-instance-manager v0.0.0-20240424213007-797b56753cd9 h1:pfTqM5QqhFsThXxSFfPmCJoK1W5ejRoDVdDfmaDon68=
+github.com/ejweber/longhorn-instance-manager v0.0.0-20240424213007-797b56753cd9/go.mod h1:DE3LwHx4rnikQ46EdL+DKGXq8oNbTma2UmffJjx5YQw=
 github.com/ejweber/types v0.0.0-20240422202538-d2e6aa72f1ee h1:61KrgL7K4HLCoc8HMGW5Gu40rfjnMUHJyyZcmbBkjbs=
 github.com/ejweber/types v0.0.0-20240422202538-d2e6aa72f1ee/go.mod h1:1oEh1cnDDqNSuFh/dH/lvJ3Ssq83SOweTAAPLRY4PMI=
 github.com/emicklei/go-restful/v3 v3.8.0/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=

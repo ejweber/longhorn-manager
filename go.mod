@@ -213,4 +213,4 @@ require (
 
 replace github.com/longhorn/types => github.com/ejweber/types v0.0.0-20240422202538-d2e6aa72f1ee
 
-replace github.com/longhorn/longhorn-instance-manager => github.com/ejweber/longhorn-instance-manager v0.0.0-20240422203354-7e90a33cc747
+replace github.com/longhorn/longhorn-instance-manager => github.com/ejweber/longhorn-instance-manager v0.0.0-20240424213007-797b56753cd9
