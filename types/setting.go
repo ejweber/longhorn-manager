@@ -478,7 +478,7 @@ var (
 		Type:        SettingTypeBool,
 		Required:    true,
 		ReadOnly:    false,
-		Default:     "false",
+		Default:     "true",
 	}
 
 	SettingDefinitionReplicaAutoBalance = SettingDefinition{
