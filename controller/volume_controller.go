@@ -1697,10 +1697,13 @@ func (c *VolumeController) requestRemountIfFileSystemReadOnly(v *longhorn.Volume
 }
 
 func (c *VolumeController) reconcileVolumeCondition(v *longhorn.Volume, e *longhorn.Engine, rs map[string]*longhorn.Replica, log *logrus.Entry) error {
-	if len(e.Status.Snapshots) > VolumeSnapshotsWarningThreshold {
+	numSnapshots := len(e.Status.Snapshots) - 1 // Counting volume-head here would be confusing.
+	if numSnapshots > VolumeSnapshotsWarningThreshold {
 		v.Status.Conditions = types.SetCondition(v.Status.Conditions,
 			longhorn.VolumeConditionTypeTooManySnapshots, longhorn.ConditionStatusTrue,
-			longhorn.VolumeConditionReasonTooManySnapshots, fmt.Sprintf("Snapshots count is %v over the warning threshold %v", len(e.Status.Snapshots), VolumeSnapshotsWarningThreshold))
+			longhorn.VolumeConditionReasonTooManySnapshots,
+			fmt.Sprintf("Snapshots count is %v over the warning threshold %v", numSnapshots,
+				VolumeSnapshotsWarningThreshold))
 	} else {
 		v.Status.Conditions = types.SetCondition(v.Status.Conditions,
 			longhorn.VolumeConditionTypeTooManySnapshots, longhorn.ConditionStatusFalse,
