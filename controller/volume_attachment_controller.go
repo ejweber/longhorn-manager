@@ -382,6 +382,7 @@ func (vac *VolumeAttachmentController) handleVolumeMigration(va *longhorn.Volume
 	}
 
 	vac.handleVolumeMigrationStart(va, vol)
+	vac.handleVolumeMigrationRestart(va, vol)
 	vac.handleVolumeMigrationConfirmation(va, vol)
 	vac.handleVolumeMigrationRollback(va, vol)
 }
@@ -406,6 +407,26 @@ func (vac *VolumeAttachmentController) handleVolumeMigrationStart(va *longhorn.V
 	if attachmentTicket := getCSIAttachmentTicketNotRequestingNode(vol.Spec.NodeID, va, vol); attachmentTicket != nil {
 		// Found one csi attachmentTicket that is requesting volume to attach to a different node
 		vol.Spec.MigrationNodeID = attachmentTicket.NodeID
+	}
+}
+
+// Reattach the volume if the engine on the original node crashes during migration.
+func (vac *VolumeAttachmentController) handleVolumeMigrationRestart(va *longhorn.VolumeAttachment, vol *longhorn.Volume) {
+	if !isVolumeFullyDetached(vol) {
+		return
+	}
+	if vol.Spec.MigrationNodeID != "" {
+		return
+	}
+
+	if !hasCSIAttachmentTicketRequestingNode(vol.Spec.MigrationNodeID, va, vol) {
+		return
+	}
+	// Found one csi attachmentTicket that is requesting volume to attach to the migration node
+
+	if attachmentTicket := getCSIAttachmentTicketNotRequestingNode(vol.Spec.NodeID, va, vol); attachmentTicket != nil {
+		// Found one csi attachmentTicket that is requesting volume to attach to a different node
+		vol.Spec.NodeID = attachmentTicket.NodeID
 	}
 }
 
@@ -618,7 +639,7 @@ func (vac *VolumeAttachmentController) handleVolumeAttachment(va *longhorn.Volum
 	log := getLoggerForLHVolumeAttachment(vac.logger, va)
 
 	// Wait for volume to be fully detached
-	if !isVolumeFullyDetached(vol) {
+	if !isVolumeFullyDetachedAndNotMigrating(vol) {
 		return
 	}
 

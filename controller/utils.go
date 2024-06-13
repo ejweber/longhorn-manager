@@ -31,9 +31,11 @@ func isTargetVolumeOfCloning(v *longhorn.Volume) bool {
 }
 
 func isVolumeFullyDetached(vol *longhorn.Volume) bool {
-	return vol.Spec.NodeID == "" &&
-		vol.Spec.MigrationNodeID == "" &&
-		vol.Status.State == longhorn.VolumeStateDetached
+	return vol.Spec.NodeID == "" && vol.Status.State == longhorn.VolumeStateDetached
+}
+
+func isVolumeFullyDetachedAndNotMigrating(vol *longhorn.Volume) bool {
+	return isVolumeFullyDetached(vol) && vol.Status.State == longhorn.VolumeStateDetached
 }
 
 func createOrUpdateAttachmentTicket(va *longhorn.VolumeAttachment, ticketID, nodeID, disableFrontend string, attacherType longhorn.AttacherType) {
