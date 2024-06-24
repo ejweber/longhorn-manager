@@ -561,13 +561,13 @@ func (sc *SnapshotController) handleAttachmentTicketCreation(snap *longhorn.Snap
 
 func (sc *SnapshotController) generatingEventsForSnapshot(existingSnapshot, snapshot *longhorn.Snapshot) {
 	if !existingSnapshot.Status.MarkRemoved && snapshot.Status.MarkRemoved {
-		sc.eventRecorder.Event(snapshot, corev1.EventTypeWarning, "SnapshotDelete", "snapshot is marked as removed")
+		sc.eventRecorder.Event(snapshot, corev1.EventTypeWarning, "SnapshotDelete", "snapshot is marked as removed") // Should not be a warning.
 	}
 	if snapshot.Spec.CreateSnapshot && existingSnapshot.Status.CreationTime == "" && snapshot.Status.CreationTime != "" {
 		sc.eventRecorder.Eventf(snapshot, corev1.EventTypeNormal, "SnapshotCreate", "successfully provisioned the snapshot")
 	}
 	if snapshot.Status.Error != "" && existingSnapshot.Status.Error != snapshot.Status.Error {
-		sc.eventRecorder.Eventf(snapshot, corev1.EventTypeWarning, "SnapshotError", "%v", snapshot.Status.Error)
+		sc.eventRecorder.Eventf(snapshot, corev1.EventTypeWarning, "SnapshotError", "%v", snapshot.Status.Error) // Should either be info when matches certain reason or not even be emitted.
 	}
 	if existingSnapshot.Status.ReadyToUse != snapshot.Status.ReadyToUse {
 		if snapshot.Status.ReadyToUse {
