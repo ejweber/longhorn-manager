@@ -307,7 +307,6 @@ func NewPluginDeployment(namespace, serviceAccount, nodeDriverRegistrarImage, li
 					Tolerations:        tolerations,
 					NodeSelector:       nodeSelector,
 					PriorityClassName:  priorityClass,
-					HostPID:            true,
 					Containers: []corev1.Container{
 						{
 							Name:  "node-driver-registrar",
@@ -447,13 +446,14 @@ func NewPluginDeployment(namespace, serviceAccount, nodeDriverRegistrarImage, li
 									MountPath: "/dev",
 								},
 								{
-									Name:      "host-sys",
-									MountPath: "/sys",
+									// The plugin must be able to switch to the host's namespaces in order to execute
+									// cryptsetup commands for encrypted devices.
+									Name:      "host-proc",
+									MountPath: "/host/proc",
 								},
 								{
-									Name:             "host",
-									MountPath:        "/host",
-									MountPropagation: &MountPropagationBidirectional,
+									Name:      "host-sys",
+									MountPath: "/sys",
 								},
 								{
 									Name:      "lib-modules",
@@ -509,18 +509,18 @@ func NewPluginDeployment(namespace, serviceAccount, nodeDriverRegistrarImage, li
 							},
 						},
 						{
-							Name: "host-sys",
+							Name: "host-proc",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/sys",
+									Path: "/proc",
 								},
 							},
 						},
 						{
-							Name: "host",
+							Name: "host-sys",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/",
+									Path: "/sys",
 								},
 							},
 						},
